@@ -4,6 +4,9 @@
 
 Questo progetto simula una pagina di visualizzazione prodotto in un sito e-commerce, dove l'utente può visionare diversi modelli del prodotto in vendita.
 
+
+![mug_modello1](https://user-images.githubusercontent.com/79991821/149802560-d6d0397d-d566-4037-98d8-0596fb545a1b.JPG) ![mug_modello2](https://user-images.githubusercontent.com/79991821/149802606-6d2ab1a3-dc8e-4766-b963-d4201635efdd.jpg)![mug_modello3](https://user-images.githubusercontent.com/79991821/149802627-9c386458-e33d-4a4b-b7ca-dfe7a7a8ef1b.JPG)
+
 ## Elementi del progetto
 
 - ASPETTO: il progetto è costruito per sembrare verosimile a una pagina di visualizzazione di un prodotto che potremmo trovare in un sito commerciale. A tale scopo sono stati aggiunti: il titolo della finestra di navigazione ed elementi grafici per formare un titolo che contestualizzi il prodotto. 
