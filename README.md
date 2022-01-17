@@ -1,5 +1,5 @@
 # ACME Shop
-![overview]C:\Users\ELISA\Documents\GitHub\product-Elisa-Lunardelli\screenshot\acme_shop.JPG
+![acme_shop](https://user-images.githubusercontent.com/79991821/149802185-f5924eb6-ec12-468d-b113-d3ce3fb31c62.JPG)
 ## Overview del progetto
 
 Questo progetto simula una pagina di visualizzazione prodotto in un sito e-commerce, dove l'utente può visionare diversi modelli del prodotto in vendita.
@@ -32,7 +32,7 @@ Il frame rate rimane sempre molto alto, attorno ai 60fps, anche in situazioni di
 
 modello tazza: https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
 
-:fonte fragmentShader: https://thebookofshaders.com/glossary/?search=mix +  esercizio 17-glossy-reflectionMapping.html
+fonte fragmentShader: https://thebookofshaders.com/glossary/?search=mix +  esercizio 17-glossy-reflectionMapping.html
                        
 modello tazza e Mug4_normal.png: https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
     
