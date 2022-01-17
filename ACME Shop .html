@@ -1,0 +1,453 @@
+
+    <html>
+
+    <!--
+    CREDITS: 
+    Skybox: humble_bk -> https://opengameart.org/node/28758
+            humble_dn -> https://opengameart.org/node/28759
+            humble_ft -> https://opengameart.org/node/28760
+            humble_lf -> https://opengameart.org/node/28761
+            humble_rt -> https://opengameart.org/node/28762
+            humble_up -> https://opengameart.org/node/28763
+
+    modello tazza: https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
+
+    fonte fragmentShader: https://thebookofshaders.com/glossary/?search=mix 
+                          esercizio 17-glossy-reflectionMapping.html
+
+    modello tazza e -> https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
+    Mug4_normal.png
+
+    NormalMap.png -> Photo by Mitchell Luo from Pexels https://www.pexels.com/photo/white-and-brown-striped-textile-3694711/
+                     trasformata con: https://cpetry.github.io/NormalMap-Online/
+    
+    grafiche create con -> https://pixlr.com/it/ 
+
+
+-->
+
+        <head>
+    
+            <title>ACME HOME shop</title>
+
+            <link rel="stylesheet" type="text/css" href="style.css"> 
+    
+            <script src="lib/three.js"></script>
+            <script src="lib/three.min.js"></script>
+            <script src="lib/stats.min.js"></script>
+            <script src="lib/Coordinates.js"></script>
+            <script src="lib/OrbitControls.js"></script>
+            <script src="lib/OBJLoader.js"></script>
+            
+        </head>
+    
+        <body>
+
+            <div style="position: fixed"> 
+                <img src="graphics/ACME titolo.png"/>   
+            </div> 
+
+            <div class="Buttons">
+
+                <button class="Button" id="b1"> MODELLO 1 </button> <br><br>
+                <button class="Button" id="b2"> MODELLO 2  </button> <br><br>
+                <button class="Button" id="b3"> MODELLO 3 </button>
+                
+
+            </div>
+
+            <div class ="mugImg">
+                <img  src="graphics/mug.png" style="width:30%" style="height: auto" />
+                
+            </div>
+
+            <!-- VERTEX SHADER---------------------------------------------------------------------------------- -->
+            <!-- Lo shader di questo esercizio è una versione di quello dell'esercizio 17-glossy-reflectionMapping.html -->
+            <!-- è stato modificato in modo che presenti un gradiente invece di un colore unico -->
+            <script type = "text/x-glsl" id = "vertex">
+
+                precision highp float;
+		        precision highp int;
+	         	attribute vec4 tangent;
+		        varying vec3 vNormal;
+		        varying vec3 vTangent;
+		        varying vec3 vBitangent;
+		        varying vec3 vPosition;
+		        varying vec2 vUv;
+
+                varying vec3 sfumaturaPos; // ---- per la sfumatura
+
+            void main () {
+
+                vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+			    vPosition = vPos.xyz;
+			    vNormal = normalize(normalMatrix * normal);
+			    vec3 objectTangent = vec3( tangent.xyz );
+			    vec3 transformedTangent = normalMatrix * objectTangent;
+			    vTangent = normalize( transformedTangent );
+			    vBitangent = normalize( cross( vNormal, vTangent ) * tangent.w );
+			    vUv = uv;
+
+                // ---- il parametro che determinerà la percentuale di sfumatura 
+                // ---- tra i colori dipende dalla posizione di ogni singolo vertice (con 0.5 ho si addolcisce la sfumatura )
+                sfumaturaPos = position*0.5; 
+
+			    gl_Position = projectionMatrix * vPos;
+            }
+
+            </script>
+
+            <!-- FRAGMENT SHADER---------------------------------------------------------------------------------- -->
+            <script type = "text/x-glsl" id = "fragment">
+
+                precision highp float;
+                precision highp int;
+                varying vec3 vNormal;
+                varying vec3 vTangent;
+                varying vec3 vBitangent;
+                varying vec3 vPosition;
+                varying vec2 vUv;
+
+                // --------- valori passati dall'esterno
+                uniform vec3 cspec;
+                uniform sampler2D normalMap;
+                uniform samplerCube envMap;
+                uniform vec2 normalScale;
+                uniform float roughness;
+
+                uniform vec3 colorA; // primo colore da sfumare
+                uniform vec3 colorB; // secondo colore da sfumare
+                varying vec3 sfumaturaPos; // indica con quale percentuale si mischiano i colori
+
+                vec3 color; // --------- variabile creata nel fragment shader
+
+
+    
+                const float PI = 3.14159;
+                #define saturate(a) clamp( a, 0.0, 1.0 )
+    
+                float pow2( const in float x ) { return x*x; }
+    
+                float getSpecularMIPLevel( const in float blinnShininessExponent, const in int maxMIPLevel ) {
+                     float maxMIPLevelScalar = float( maxMIPLevel );
+                     float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2( pow2( blinnShininessExponent ) + 1.0 );
+                     return clamp( desiredMIPLevel, 0.0, maxMIPLevelScalar );
+                 }
+    
+                float GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {
+                      return ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );
+                  }
+    
+                // http://en.wikibooks.org/wiki/GLSL_Programming/Applying_Matrix_Transformations
+                vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+                    return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+                }
+    
+                vec3 BRDF_Specular_GGX_Environment( vec3 normal, vec3 viewDir, const in vec3 cspec, const in float roughness ) {
+    
+                    float dotNV = saturate( dot( normal, viewDir ) );
+                    const vec4 c0 = vec4( - 1, - 0.0275, - 0.572, 0.022 );
+                    const vec4 c1 = vec4( 1, 0.0425, 1.04, - 0.04 );
+                    vec4 r = roughness * c0 + c1;
+                    float a004 = min( r.x * r.x, exp2( - 9.28 * dotNV ) ) * r.x + r.y;
+                    vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw; 
+                    return cspec * AB.x + AB.y;
+    
+                }
+    
+                void main() {
+
+                    color = mix(colorA,colorB, sfumaturaPos.y); // calcolo il colore della sfumatura
+
+                    vec3 normal = normalize( vNormal );
+                    vec3 tangent = normalize( vTangent );
+                    vec3 bitangent = normalize( vBitangent );
+                    mat3 vTBN = mat3( tangent, bitangent, normal );
+                    vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0; 
+                    mapN.xy = normalScale * mapN.xy; 
+                    vec3 n = normalize( vTBN * mapN ); 
+                    vec3 v = normalize( -vPosition);
+                    vec3 vReflect = reflect(vPosition,n);
+                    vec3 r = inverseTransformDirection( vReflect, viewMatrix );
+    
+                    float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
+                    float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent,8 );
+    
+                     vec3 envLight = textureCubeLodEXT( envMap, vec3(-r.x, r.yz), specularMIPLevel ).rgb;
+                     // texture in sRGB, linearize
+                    envLight = pow( envLight, vec3(2.2));
+                    vec3 outRadiance = envLight*BRDF_Specular_GGX_Environment(n, v, cspec, roughness);
+
+                    // gamma encode the final value
+                    gl_FragColor = vec4(pow(outRadiance,color/2.2),1.0); 
+                    // ----- uniamo il colore sfumato al risultato della normale equazione 
+                    
+                }   
+			
+
+            </script>
+
+            <script>
+
+                var scene, renderer, camera, controls, stats, mug, hemiLight, dirLight;
+
+
+                var v_shader = document.getElementById("vertex").textContent;    // estraggo il contenuto del vertex shader
+                var f_shader = document.getElementById("fragment").textContent;  // estraggo il contenuto del fragment shader
+                
+
+                var B1 = document.getElementById("b1");  // accedo al primo bottone   
+                var B2 = document.getElementById("b2");  // accedo al secondo bottone 
+                var B3 = document.getElementById("b3");  // accedo al terzo bottone 
+
+                var choice = 1;  // tiene traccia di quale pulsante preme l'utente
+
+                var options = {  // i dati relativi al colore tra cui si può scegliere 
+
+				color_A: new THREE.Vector3(0.4,0.4,0.4), 
+				color_B: new THREE.Vector3(1.0,0.9,0.9),
+
+                color_C: new THREE.Vector3(0.8,0.8,0.8),  
+                color_D: new THREE.Vector3(1.0,0.3,0.3) 
+                
+			}
+
+                
+
+
+
+                // FUNZIONE START --------------------------------------------------------------------------------------------
+
+                scene = new THREE.Scene();
+
+                var loaderCubeT = new THREE.CubeTextureLoader();        // carico e visualizzo la cubemap
+				loaderCubeT.setPath( 'textures/cubemap1/' );
+
+				var textureCube = loaderCubeT.load( [
+					'humble_lf.jpg', 'humble_rt.jpg',
+					'humble_up.jpg', 'humble_dn.jpg',
+					'humble_ft.jpg', 'humble_bk.jpg'
+				] );
+
+               
+			    scene.background = textureCube;   // applico la cube map allo sfondo
+
+                // FUNZIONE PER IL CARICAMENTO DELLE TEXTURE
+                function loadTexture(file) {
+				var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+					texture.minFilter = THREE.LinearMipMapLinearFilter;  // .minFilter specifica come deve essere fatto il sampling in caso un texel non riesca a coprire un pixel
+					texture.anisotropy = renderer.getMaxAnisotropy();    // .LinearMipMapLinear è il valore di defaul. Anisotropy fissa il numero di samples presi sul lato della texture più denso 
+    			    texture.offset.set( 0, 0 );                          // quanto distanziano le ripetizioni della texture
+					texture.needsUpdate = true;                          // il materiale va ricompilato
+
+					} )
+				return texture; 
+                }
+
+                var normalMap1 = loadTexture( "models/Mug4_normal.png" );  // carico prima normal map
+                var normalMap2 = loadTexture( "models/NormalMap.png" );    // carico seconda normal map
+                
+                // VALORI DA PASSARE IN INPUT ALLO SHADER
+                var uniforms = {
+				    
+                    colorA: {type: 'v3', value:new THREE.Vector3(0.8,0.8,0.8)},  // rosso
+                    colorB: {type: 'v3', value:new THREE.Vector3(1.0,0.3,0.3)}, // blu
+                    cspec:	{ type: "v3", value: new THREE.Vector3(0.1,0.1,0.1) }, 
+                    normalMap:	{ type: "t", value: normalMap1},
+                    normalScale: {type: "v2", value: new THREE.Vector2(1,1)}, // non ha senso variarla perchè la nostra map è piatta bene o male
+					envMap:	{ type: "t", value: textureCube},
+					roughness: { type: "f", value: 0.4},  // aumentando il colore diventa più cupo fino al nero con 1
+
+				};
+                
+                materialExtensions = {  // permettere di aumentare il numero di funzioni legate alle texture
+				shaderTextureLOD: true  // per il controllo del livello di dettagli 
+		        };
+
+                // MATERIALI
+                var mugMaterial1 = new THREE.ShaderMaterial({         // materiale che utilizza gli shader
+                        uniforms: uniforms,
+                        vertexShader: v_shader,
+                        fragmentShader: f_shader,
+                        extensions: materialExtensions
+
+                    });
+                    
+                 var mugMaterial = new THREE.MeshPhongMaterial( {    // materiale che lavora più ad alto livello rispetto
+                     color: 0x006466,                                // allo ShaderMaterial 
+                     specular: 0xcaf0f8 ,                            // specular -> colore del riflesso
+                     shininess: 90,                                  // shininess -> livello di brillantezza della superficie
+                     normalMap: normalMap2                           // normalMap -> disegno rilievi sulla superficie
+                 } );
+
+                // FUNZIONE PER IL CARICAMENTO DEL MODELLO 3D
+                var loader = new THREE.OBJLoader();
+			        loader.useIndices = true;
+				    loader.load( './models/Mug4.obj', function ( model ) { 
+					geometry = model.children[0].geometry;                     // accediamo alla geometria del modello  
+					geometry.center();                                         // centriamo la geometria
+					mesh = new THREE.Mesh( geometry, mugMaterial1 );           // creo la mesh (mugMaterial1 è il materiale di default)
+					mesh.scale.multiplyScalar( 0.4 );                          // regolo le dimensioni del modello
+					
+					scene.add( mesh );                                         // aggiungo il modello alla scena
+					
+				} );
+
+                //GESTIONE DELLA SCELTA DELL'UTENTE
+                // Ogni volta che l'utente clicca su un pulsante viene evidenziata graficamente la sua scelta colorando la scritta del bottone
+                // infine viene aggiornata una variabile che conserva un valore rappresentante la scelta fatta. In base a questo 
+                // vengono fatte le dovute modifiche al modello
+
+                B1.onclick = function (){
+                B1.style.color = "red" ;
+                B2.style.color = "white";
+                B3.style.color = "white";
+                choice = 1;
+                
+                }
+
+                B2.onclick = function (){
+                B2.style.color = "red" ;
+                B1.style.color = "white";
+                B3.style.color = "white";
+                choice = 2;
+                
+                }
+
+                B3.onclick = function (){
+                B3.style.color = "red" ;
+                B1.style.color = "white";
+                B2.style.color = "white";
+                choice = 3;
+                
+                }
+            
+
+            function Start() {
+
+                renderer = new THREE.WebGLRenderer( { alpha: true, antialias: true} );
+                renderer.setClearColor(0xffffff, 1);  // rendiamo lo sfondo del canvas trasparente, antialias: true
+                renderer.setPixelRatio( window.devicePixelRatio );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                window.addEventListener( 'resize', onResize); // per adattare il rendering alla grandezza della finestra , false 
+
+                
+			    renderer.gammaInput = true;
+			    renderer.gammaOutput = true;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+				renderer.toneMappingExposure = 1;
+				renderer.outputEncoding = THREE.sRGBEncoding;
+
+                document.body.appendChild(renderer.domElement);
+
+			    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.25, 20 );
+                camera.position.set(0, 0, 5);
+			    camera.lookAt( new THREE.Vector3(0,0,0));
+
+                // Sono state aggiunte delle luci ulteriori alla EM. Vengono sfruttate con il materiale  mugMaterial
+                var hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );  // luci: HemisphereLight
+			    hemiLight.color.setHSL( 0.6, 1, 0.6 );
+			    hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+			    hemiLight.position.set( 0, 500, 0 );
+			    scene.add( hemiLight );
+
+                var dirLight = new THREE.DirectionalLight( 0xffffff, 1 );              // luci: DirectionalLight
+			    dirLight.color.setHSL( 0.1, 1, 0.95 );
+			    dirLight.position.set( -1, 1.75, 1 );
+			    dirLight.position.multiplyScalar( 50 );
+			    scene.add( dirLight );
+			    dirLight.castShadow = true;
+			    dirLight.shadow.mapSize.width = 1024;
+			    dirLight.shadow.mapSize.height = 1024;
+                
+                // controls.enablePan è stato disabilitato per evitare che l'utente, osservando l'oggetto
+                // possa perderlo di vista. Inoltre la rotazione attorno all'oggetto, una volta che questo è spostato
+                // dal centro può creare confusione a schermo. 
+			    controls = new THREE.OrbitControls( camera, renderer.domElement );
+			    controls.addEventListener( 'change', Render );
+                controls.enablePan = false; 
+
+                stats = new Stats();// pannello di controllo prestazioni
+			    stats.domElement.style.position = 'absolute';
+			    stats.domElement.style.top = '690px';
+			    stats.domElement.style.left = '30px';
+			    document.body.appendChild( stats.domElement ); 
+
+
+            }// fine start 
+
+            // OnResize permette di adattare le misure del renderer ai cambiamenti della finestra in modo che 
+            // le immagini renderizzate non vengano distorte
+            function onResize() {  
+
+                // quando trascino la finestra per cambiare grandezza in alto a destra appare la misura corrente 
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                camera.aspect = ( window.innerWidth / window.innerHeight );
+                camera.updateProjectionMatrix(); // aggiorno la proiezione fatta dalla camera
+
+                }
+
+
+
+
+                function Update(){
+
+                requestAnimationFrame( Update );
+
+                controls.update();  
+                stats.update();
+
+                Render();
+
+                }
+
+
+
+                function Render() {
+
+                    updateUniforms();
+			
+			    renderer.render(scene, camera);
+
+		        }
+
+                // INTERAGIRE CON LO SHADER
+                function updateUniforms() {
+
+                // in base al valore di choice si va a sostituire in uniforms il valore di alcuni attributi
+                // le modifiche fatte sullo shader vanno fatte all'interno della funzione di rendering.
+
+                switch (choice){
+
+                    case 1:
+                    mesh.material = mugMaterial1;
+                    uniforms.colorA.value = options.color_A;
+                    uniforms.colorB.value = options.color_B;
+                    uniforms.normalMap.value = normalMap1;   
+                    break;
+
+                    case 2:
+                    mesh.material = mugMaterial1; 
+                    uniforms.colorA.value = options.color_C;
+                    uniforms.colorB.value = options.color_D;
+                    uniforms.normalMap.value = normalMap1;   
+                    break;
+
+                    case 3:
+                     mesh.material = mugMaterial; 
+                    break;  
+
+                }
+                
+               }
+
+
+		
+	       	Start();
+	     	Update();
+
+            </script>
+
+        </body>
+</html>

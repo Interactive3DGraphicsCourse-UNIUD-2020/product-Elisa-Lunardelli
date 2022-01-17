@@ -1,0 +1,8 @@
+Model Information:
+* title:	Mug 4
+* source:	https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
+* author:	plaggy (https://sketchfab.com/plaggy)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works
