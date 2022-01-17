@@ -1,5 +1,5 @@
 # ACME Shop
-
+![overview!]C:\Users\ELISA\Documents\GitHub\product-Elisa-Lunardelli\screenshot\acme_shop.JPG
 ## Overview del progetto
 
 Questo progetto simula una pagina di visualizzazione prodotto in un sito e-commerce, dove l'utente può visionare diversi modelli del prodotto in vendita.
