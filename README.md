@@ -37,6 +37,7 @@ modello tazza: https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0c
 modello tazza e Mug4_normal.png: https://sketchfab.com/3d-models/mug-4-dde2b6ecff054aa8ad19f3aeb0cf9651
     
 
-NormalMap.png: photo by Mitchell Luo from Pexels: https://www.pexels.com/photo/white-and-brown-striped-textile-3694711/ [trasformata con normal map online] https://cpetry.github.io/NormalMap-Online/
+NormalMap.png: photo by Mitchell Luo from Pexels: https://www.pexels.com/photo/white-and-brown-striped-textile-3694711/
+trasformata con normal map online con https://cpetry.github.io/NormalMap-Online/
 
 grafiche create con pixlr: https://pixlr.com/it/ 
