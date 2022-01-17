@@ -17,7 +17,7 @@ MESHPHONGMATERIAL: questo tipo di materiale, più intuitivo da utilizzare, perme
 
 - CUBEMAP: la cube map determina l'aspetto dello sfondo ma agisce anche sull'illuminazione della scena.
 
--INTERFACCIA: per rendere la scena interattiva ho sfruttato l'evento 'onclick' associato a dei bottoni visualizzati a schermo. La variabile 'choice' è adibita a conservare la scelta fatta dall'utente(viene aggiornata ad ogni click) per poi essere inserita in un costrutto switch per determinare quale cambiamento apportare. I bottoni sono stati poi personalizzati usando il CSS. Il modello è ispezionabile con il mouse a 360° 
+- INTERFACCIA: per rendere la scena interattiva ho sfruttato l'evento 'onclick' associato a dei bottoni visualizzati a schermo. La variabile 'choice' è adibita a conservare la scelta fatta dall'utente(viene aggiornata ad ogni click) per poi essere inserita in un costrutto switch per determinare quale cambiamento apportare. I bottoni sono stati poi personalizzati usando il CSS. Il modello è ispezionabile con il mouse a 360° 
 
 
 ## Prestazioni
